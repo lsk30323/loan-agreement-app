@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="차용증">
+  <rect width="512" height="512" fill="#2b5cd9"/>
+  <rect x="123" y="92" width="266" height="328" rx="23" fill="#ffffff"/>
+  <rect x="166" y="131" width="133" height="28" rx="8" fill="#2b5cd9"/>
+  <g fill="#c9d1e0">
+    <rect x="166" y="206" width="180" height="16" rx="8"/>
+    <rect x="166" y="243" width="180" height="16" rx="8"/>
+    <rect x="166" y="280" width="180" height="16" rx="8"/>
+    <rect x="166" y="317" width="119" height="16" rx="8"/>
+  </g>
+</svg>

@@ -1,0 +1,53 @@
+# (선택) GitHub Actions 기반 Pages 배포 워크플로 — 앱 파일만 추려 깔끔히 게시.
+#
+# 현재 저장소는 토큰의 `workflow` 스코프 제한 때문에 '브랜치 기반 배포'
+# (Settings → Pages → Source: Deploy from a branch, main /)로 설정되어 있습니다.
+#
+# 이 Actions 워크플로로 바꾸고 싶다면:
+#   1) gh auth refresh -h github.com -s workflow   (브라우저 인증으로 workflow 스코프 추가)
+#   2) 이 파일을 .github/workflows/deploy-pages.yml 로 이동
+#   3) Settings → Pages → Source 를 "GitHub Actions" 로 변경
+#   4) git add/commit/push
+# 그러면 tests/·tools/·spec·.claude 등을 제외하고 앱 파일만 게시됩니다.
+
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Stage site
+        run: |
+          mkdir -p _site
+          cp -r index.html styles.css manifest.webmanifest sw.js icons src _site/
+          touch _site/.nojekyll
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+        with:
+          enablement: true
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+      - name: Deploy
+        id: deployment
+        uses: actions/deploy-pages@v4

@@ -1,0 +1,19 @@
+# Netlify 설정 — git 연결(자동 배포) 또는 Netlify CLI 배포 시 사용.
+# 빌드 단계는 없지만, 앱 파일만 dist/ 로 추려 깔끔히 게시한다.
+# (Netlify Drop으로 폴더를 직접 드래그하면 이 빌드는 실행되지 않고 폴더 전체가 게시됨)
+
+[build]
+  command = "mkdir -p dist && cp -r index.html styles.css manifest.webmanifest sw.js icons src dist/"
+  publish = "dist"
+
+# 서비스워커는 캐시하지 않음 → 업데이트가 즉시 반영
+[[headers]]
+  for = "/sw.js"
+  [headers.values]
+    Cache-Control = "no-cache"
+
+# 매니페스트 MIME 명시
+[[headers]]
+  for = "/manifest.webmanifest"
+  [headers.values]
+    Content-Type = "application/manifest+json"

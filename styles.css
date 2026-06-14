@@ -1,0 +1,403 @@
+/* =====================================================================
+   styles.css — 차용증 관리 앱
+   - 모바일 우선 반응형, 큰 터치 영역, 한글 가독성
+   - 시스템 폰트 스택만 사용 (외부 폰트 금지)
+   - @media print: 화면 UI 숨김, #print-doc(.agreement-doc)만 출력
+   ===================================================================== */
+
+:root {
+  --c-bg: #f4f5f7;
+  --c-surface: #ffffff;
+  --c-border: #d8dce2;
+  --c-text: #1c2430;
+  --c-text-muted: #5d6675;
+  --c-primary: #2b5cd9;
+  --c-primary-dark: #1f47ad;
+  --c-danger: #c0392b;
+  --c-warn-bg: #fff5e0;
+  --c-warn-border: #e6b65c;
+  --c-warn-text: #8a5a00;
+  --c-ok: #1e8e5a;
+  --radius: 10px;
+  --space: 16px;
+  --tap: 44px;
+  --maxw: 720px;
+}
+
+* { box-sizing: border-box; }
+
+html { -webkit-text-size-adjust: 100%; }
+
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, "Segoe UI", "Malgun Gothic", "Apple SD Gothic Neo",
+    "Noto Sans KR", "Helvetica Neue", Arial, sans-serif;
+  font-size: 16px;
+  line-height: 1.5;
+  color: var(--c-text);
+  background: var(--c-bg);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ===== 상단 바 ===== */
+.app-header {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: var(--c-surface);
+  border-bottom: 1px solid var(--c-border);
+  padding: var(--space);
+}
+.app-header-top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  max-width: var(--maxw);
+  margin: 0 auto;
+}
+.app-title {
+  font-size: 1.25rem;
+  margin: 0;
+  flex: 1 1 auto;
+}
+.app-header-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.app-header-select {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  max-width: var(--maxw);
+  margin: 12px auto 0;
+}
+.select-label {
+  font-size: 0.85rem;
+  color: var(--c-text-muted);
+  white-space: nowrap;
+}
+.select-agreement {
+  flex: 1 1 auto;
+  min-height: var(--tap);
+}
+.global-message {
+  max-width: var(--maxw);
+  margin: 10px auto 0;
+  padding: 10px 12px;
+  border-radius: var(--radius);
+  font-size: 0.9rem;
+}
+.global-message.is-ok { background: #e6f6ee; color: var(--c-ok); border: 1px solid #b6e3cb; }
+.global-message.is-error { background: #fdecea; color: var(--c-danger); border: 1px solid #f1bcb5; }
+
+/* ===== 탭 내비게이션 ===== */
+.tab-nav {
+  position: sticky;
+  top: 0;
+  z-index: 9;
+  display: flex;
+  background: var(--c-surface);
+  border-bottom: 1px solid var(--c-border);
+  max-width: var(--maxw);
+  margin: 0 auto;
+  overflow-x: auto;
+}
+.tab-btn {
+  flex: 1 0 auto;
+  min-height: var(--tap);
+  padding: 10px 12px;
+  border: none;
+  border-bottom: 3px solid transparent;
+  background: transparent;
+  color: var(--c-text-muted);
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.tab-btn.is-active {
+  color: var(--c-primary);
+  border-bottom-color: var(--c-primary);
+}
+
+/* ===== 메인 / 화면 ===== */
+.app-main {
+  max-width: var(--maxw);
+  margin: 0 auto;
+  padding: var(--space);
+}
+.screen { display: none; }
+.screen.is-active { display: block; }
+
+/* ===== 카드 / 폼 ===== */
+.card {
+  background: var(--c-surface);
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius);
+  padding: var(--space);
+  margin: 0 0 var(--space);
+}
+.card-title {
+  font-size: 1.05rem;
+  font-weight: 700;
+  margin: 0 0 12px;
+  padding: 0;
+}
+fieldset.card { min-width: 0; }
+
+.field { margin-bottom: 14px; }
+.field:last-child { margin-bottom: 0; }
+.field label {
+  display: block;
+  font-size: 0.9rem;
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+.req { color: var(--c-danger); }
+
+.field-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.field-row > .field {
+  flex: 1 1 200px;
+  min-width: 0;
+}
+
+input[type="text"],
+input[type="number"],
+input[type="date"],
+input[type="month"],
+input[type="tel"],
+select,
+textarea {
+  width: 100%;
+  min-height: var(--tap);
+  padding: 10px 12px;
+  font: inherit;
+  color: var(--c-text);
+  background: var(--c-surface);
+  border: 1px solid var(--c-border);
+  border-radius: 8px;
+}
+textarea { min-height: 80px; resize: vertical; }
+input:focus, select:focus, textarea:focus {
+  outline: 2px solid var(--c-primary);
+  outline-offset: 1px;
+  border-color: var(--c-primary);
+}
+input.is-invalid, select.is-invalid {
+  border-color: var(--c-danger);
+  background: #fdf3f2;
+}
+
+.input-with-toggle { display: flex; gap: 8px; }
+.input-with-toggle input { flex: 1 1 auto; }
+
+.field-hint { margin: 6px 0 0; font-size: 0.8rem; color: var(--c-text-muted); }
+.field-amount-korean { margin: 6px 0 0; font-size: 0.95rem; font-weight: 600; color: var(--c-primary-dark); min-height: 1.2em; }
+.field-error { margin: 6px 0 0; font-size: 0.82rem; color: var(--c-danger); min-height: 0; }
+.field-error:empty { display: none; }
+
+/* ===== 버튼 ===== */
+.btn {
+  min-height: var(--tap);
+  padding: 8px 16px;
+  font: inherit;
+  font-weight: 600;
+  color: var(--c-text);
+  background: #eef0f4;
+  border: 1px solid var(--c-border);
+  border-radius: 8px;
+  cursor: pointer;
+}
+.btn:hover { background: #e3e6ec; }
+.btn-primary { color: #fff; background: var(--c-primary); border-color: var(--c-primary); }
+.btn-primary:hover { background: var(--c-primary-dark); }
+.btn-ghost { background: transparent; }
+.btn-danger-outline { color: var(--c-danger); border-color: #e6b1aa; background: #fff; }
+.btn-danger-outline:hover { background: #fdecea; }
+.btn-mask-toggle { flex: 0 0 auto; white-space: nowrap; }
+.btn-block { width: 100%; }
+.btn-small { min-height: 36px; padding: 4px 10px; font-size: 0.82rem; }
+
+.form-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 4px; }
+
+/* ===== 경고 박스 ===== */
+.form-warnings {
+  background: var(--c-warn-bg);
+  border: 1px solid var(--c-warn-border);
+  color: var(--c-warn-text);
+  border-radius: var(--radius);
+  padding: 12px 14px;
+  margin-bottom: var(--space);
+  font-size: 0.88rem;
+}
+.form-warnings ul { margin: 0; padding-left: 18px; }
+.form-warnings li { margin: 2px 0; }
+
+/* ===== 요약 그리드 ===== */
+.summary-grid {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 6px 12px;
+  margin: 0;
+}
+.summary-grid dt { color: var(--c-text-muted); font-size: 0.9rem; }
+.summary-grid dd { margin: 0; text-align: right; font-weight: 600; font-variant-numeric: tabular-nums; }
+.summary-grid dd.is-warn { color: var(--c-warn-text); }
+.summary-grid dd.is-danger { color: var(--c-danger); }
+
+/* ===== 진행률 바 ===== */
+.progress {
+  margin-top: 14px;
+  height: 14px;
+  background: #e3e6ec;
+  border-radius: 999px;
+  overflow: hidden;
+}
+.progress-bar {
+  height: 100%;
+  width: 0;
+  background: var(--c-primary);
+  transition: width 0.25s ease;
+}
+.progress-label { margin: 8px 0 0; font-size: 0.85rem; color: var(--c-text-muted); text-align: center; }
+
+/* ===== 모드 토글 ===== */
+.mode-toggle { display: flex; gap: 8px; margin-bottom: 14px; }
+.mode-btn {
+  flex: 1 1 0;
+  min-height: var(--tap);
+  padding: 8px 10px;
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--c-text-muted);
+  background: #eef0f4;
+  border: 1px solid var(--c-border);
+  border-radius: 8px;
+  cursor: pointer;
+}
+.mode-btn.is-active { color: #fff; background: var(--c-primary); border-color: var(--c-primary); }
+
+/* ===== 테이블 ===== */
+.table-wrap { overflow-x: auto; }
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.88rem;
+}
+.data-table th, .data-table td {
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--c-border);
+  text-align: left;
+  white-space: nowrap;
+}
+.data-table th { background: #f0f2f6; font-weight: 700; }
+.data-table .num { text-align: right; font-variant-numeric: tabular-nums; }
+.data-table td.note-cell { white-space: normal; max-width: 160px; }
+.data-table td.action-cell { display: flex; gap: 6px; white-space: nowrap; }
+.data-table tr.is-editing { background: #eef3ff; }
+.data-table tr.is-editing td { box-shadow: inset 0 0 0 9999px rgba(74, 108, 247, 0.06); }
+
+.empty-state { color: var(--c-text-muted); text-align: center; padding: 16px 0; margin: 0; }
+
+/* ===== 면책 문구 ===== */
+.app-footer {
+  max-width: var(--maxw);
+  margin: 0 auto;
+  padding: var(--space);
+}
+.disclaimer {
+  font-size: 0.78rem;
+  color: var(--c-text-muted);
+  line-height: 1.6;
+  margin: 0;
+}
+
+/* ===== 차용증 문서 (화면 미리보기) ===== */
+#print-doc { display: none; }
+.print-preview-wrap { display: block; }
+.print-preview-wrap .agreement-doc,
+#print-doc .agreement-doc {
+  background: #fff;
+  color: #000;
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius);
+  padding: 28px;
+  max-width: var(--maxw);
+  margin: 0 auto;
+  line-height: 1.7;
+}
+.print-preview-wrap:empty::before {
+  content: "‘차용증 미리보기’ 버튼을 누르면 여기에 표시됩니다.";
+  display: block;
+  color: var(--c-text-muted);
+  text-align: center;
+  padding: 24px 0;
+}
+
+/* ===== 차용증 문서 내부 요소 ===== */
+.agreement-doc-header { text-align: center; margin-bottom: 20px; }
+.agreement-doc-title { font-size: 1.8rem; letter-spacing: 0.3em; margin: 0 0 4px; }
+.agreement-doc-subtitle { font-size: 0.95rem; color: #444; margin: 0; }
+.agreement-doc-dl { margin: 0; }
+.agreement-doc-row { display: flex; gap: 10px; padding: 6px 0; border-bottom: 1px dashed #ccc; }
+.agreement-doc-term { flex: 0 0 110px; font-weight: 700; margin: 0; }
+.agreement-doc-desc { flex: 1 1 auto; margin: 0; }
+.agreement-doc-amount-num { color: #333; }
+.agreement-doc-terms, .agreement-doc-parties, .agreement-doc-extras { margin-bottom: 18px; }
+.agreement-doc-party { margin-bottom: 14px; }
+.agreement-doc-party-title, .agreement-doc-section-title { font-size: 1.05rem; margin: 0 0 6px; border-left: 4px solid #333; padding-left: 8px; }
+.agreement-doc-statement { margin: 18px 0; text-indent: 0; }
+.agreement-doc-date { text-align: center; margin: 24px 0 18px; font-weight: 600; }
+.agreement-doc-signatures { display: flex; flex-wrap: wrap; gap: 24px; justify-content: flex-end; margin-top: 18px; }
+.agreement-doc-sign-cell { display: flex; align-items: baseline; gap: 8px; }
+.agreement-doc-sign-role { font-weight: 700; }
+.agreement-doc-sign-name { min-width: 70px; }
+.agreement-doc-sign-line { display: inline-block; width: 90px; border-bottom: 1px solid #333; }
+.agreement-doc-footer { margin-top: 24px; border-top: 1px solid #ccc; padding-top: 10px; }
+.agreement-doc-disclaimer { font-size: 0.75rem; color: #666; margin: 0; }
+
+/* ===== 데스크탑 보정 ===== */
+@media (min-width: 600px) {
+  .app-title { font-size: 1.4rem; }
+}
+
+/* =====================================================================
+   인쇄: 화면 UI 전부 숨기고 #print-doc만 출력 (A4)
+   ===================================================================== */
+@media print {
+  @page { size: A4; margin: 18mm 16mm; }
+
+  body { background: #fff; color: #000; font-size: 12pt; }
+
+  /* 화면 UI 숨김 */
+  .app-header,
+  .tab-nav,
+  .app-main,
+  .app-footer,
+  .no-print {
+    display: none !important;
+  }
+
+  /* 인쇄 문서만 표시 */
+  #print-doc { display: block !important; }
+  #print-doc .agreement-doc {
+    border: none;
+    border-radius: 0;
+    padding: 0;
+    max-width: none;
+    margin: 0;
+  }
+
+  .agreement-doc-row { break-inside: avoid; }
+  .agreement-doc-party,
+  .agreement-doc-signatures,
+  .agreement-doc-extras { break-inside: avoid; }
+  .agreement-doc-title { letter-spacing: 0.4em; }
+}

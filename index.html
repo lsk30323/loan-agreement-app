@@ -1,0 +1,333 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>차용증 관리</title>
+  <meta name="description" content="차용증 작성·출력과 실시간 상환 갱신을 처리하는 로컬 우선 앱." />
+  <!-- PWA: 설치형 + 오프라인 -->
+  <link rel="manifest" href="manifest.webmanifest" />
+  <meta name="theme-color" content="#2b5cd9" />
+  <link rel="icon" type="image/svg+xml" href="icons/icon.svg" />
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="차용증" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <!-- ===== 상단 바: 제목 + 차용증 선택 + 새 차용증 + 내보내기/가져오기 ===== -->
+  <header class="app-header" id="app-header">
+    <div class="app-header-top">
+      <h1 class="app-title">차용증 관리</h1>
+      <div class="app-header-actions">
+        <button type="button" id="btn-new" class="btn btn-primary">+ 새 차용증</button>
+        <button type="button" id="btn-export" class="btn">내보내기</button>
+        <button type="button" id="btn-import" class="btn">가져오기</button>
+        <input type="file" id="file-import" accept=".json,application/json" hidden />
+      </div>
+    </div>
+    <div class="app-header-select">
+      <label for="select-agreement" class="select-label">차용증 선택</label>
+      <select id="select-agreement" class="select-agreement"></select>
+      <button type="button" id="btn-delete-agreement" class="btn btn-danger-outline" title="이 차용증 삭제">삭제</button>
+    </div>
+    <!-- 전역 안내/오류 메시지 (가져오기 결과 등) -->
+    <p id="global-message" class="global-message" role="status" aria-live="polite" hidden></p>
+  </header>
+
+  <!-- ===== 탭 내비게이션 ===== -->
+  <nav class="tab-nav" id="tab-nav" role="tablist" aria-label="화면 전환">
+    <button type="button" class="tab-btn is-active" role="tab" data-screen="edit"      id="tab-edit"      aria-controls="screen-edit"      aria-selected="true">① 차용증 입력</button>
+    <button type="button" class="tab-btn"           role="tab" data-screen="ledger"    id="tab-ledger"    aria-controls="screen-ledger"    aria-selected="false">② 상환 원장</button>
+    <button type="button" class="tab-btn"           role="tab" data-screen="dashboard" id="tab-dashboard" aria-controls="screen-dashboard" aria-selected="false">③ 대시보드</button>
+    <button type="button" class="tab-btn"           role="tab" data-screen="print"     id="tab-print"     aria-controls="screen-print"     aria-selected="false">④ 차용증 출력</button>
+  </nav>
+
+  <main class="app-main" id="app-main">
+
+    <!-- ===================================================================
+         화면 ① 차용증 입력/편집
+    ==================================================================== -->
+    <section class="screen is-active" id="screen-edit" role="tabpanel" aria-labelledby="tab-edit">
+      <form id="form-agreement" class="form" novalidate>
+
+        <fieldset class="card">
+          <legend class="card-title">채권자 (빌려준 사람)</legend>
+          <div class="field">
+            <label for="creditor-name">성명 <span class="req">*</span></label>
+            <input type="text" id="creditor-name" name="creditor.name" autocomplete="off" />
+            <p class="field-error" id="err-creditor.name"></p>
+          </div>
+          <div class="field">
+            <label for="creditor-idNumber">주민등록번호 (선택)</label>
+            <div class="input-with-toggle">
+              <input type="text" id="creditor-idNumber" name="creditor.idNumber" inputmode="numeric" autocomplete="off" data-masked="true" />
+              <button type="button" class="btn btn-ghost btn-mask-toggle" data-target="creditor-idNumber">보기</button>
+            </div>
+            <p class="field-hint">화면 표시만 마스킹됩니다. 저장은 원문 기준입니다.</p>
+          </div>
+          <div class="field">
+            <label for="creditor-address">주소 (선택)</label>
+            <input type="text" id="creditor-address" name="creditor.address" autocomplete="off" />
+          </div>
+          <div class="field">
+            <label for="creditor-phone">연락처 (선택)</label>
+            <input type="text" id="creditor-phone" name="creditor.phone" inputmode="tel" autocomplete="off" />
+          </div>
+          <div class="field">
+            <label for="creditor-account">입금계좌 (선택)</label>
+            <input type="text" id="creditor-account" name="creditor.account" autocomplete="off" />
+            <p class="field-hint">지급방법이 계좌이체이면 입력을 권장합니다.</p>
+          </div>
+        </fieldset>
+
+        <fieldset class="card">
+          <legend class="card-title">채무자 (빌린 사람)</legend>
+          <div class="field">
+            <label for="debtor-name">성명 <span class="req">*</span></label>
+            <input type="text" id="debtor-name" name="debtor.name" autocomplete="off" />
+            <p class="field-error" id="err-debtor.name"></p>
+          </div>
+          <div class="field">
+            <label for="debtor-idNumber">주민등록번호 (선택)</label>
+            <div class="input-with-toggle">
+              <input type="text" id="debtor-idNumber" name="debtor.idNumber" inputmode="numeric" autocomplete="off" data-masked="true" />
+              <button type="button" class="btn btn-ghost btn-mask-toggle" data-target="debtor-idNumber">보기</button>
+            </div>
+          </div>
+          <div class="field">
+            <label for="debtor-address">주소 (선택)</label>
+            <input type="text" id="debtor-address" name="debtor.address" autocomplete="off" />
+          </div>
+          <div class="field">
+            <label for="debtor-phone">연락처 (선택)</label>
+            <input type="text" id="debtor-phone" name="debtor.phone" inputmode="tel" autocomplete="off" />
+          </div>
+        </fieldset>
+
+        <fieldset class="card">
+          <legend class="card-title">대출조건</legend>
+          <div class="field">
+            <label for="principal">차용 원금 (원) <span class="req">*</span></label>
+            <input type="number" id="principal" name="principal" inputmode="numeric" min="0" max="100000000000" step="1" />
+            <p class="field-amount-korean" id="principal-korean"></p>
+            <p class="field-error" id="err-principal"></p>
+          </div>
+          <div class="field-row">
+            <div class="field">
+              <label for="interestKind">이자 계산방식</label>
+              <select id="interestKind" name="interestKind"></select>
+              <p class="field-error" id="err-interestKind"></p>
+            </div>
+            <div class="field">
+              <label for="interestRate">연이율 (%)</label>
+              <input type="number" id="interestRate" name="interestRate" inputmode="decimal" min="0" max="20" step="0.1" />
+              <p class="field-error" id="err-interestRate"></p>
+            </div>
+          </div>
+          <div class="field">
+            <label for="lateRate">지연손해금율 (%) (선택)</label>
+            <input type="number" id="lateRate" name="lateRate" inputmode="decimal" min="0" max="20" step="0.1" />
+            <p class="field-error" id="err-lateRate"></p>
+          </div>
+          <div class="field-row">
+            <div class="field">
+              <label for="loanDate">차용일 (돈 받은 날) <span class="req">*</span></label>
+              <input type="date" id="loanDate" name="loanDate" />
+              <p class="field-error" id="err-loanDate"></p>
+            </div>
+            <div class="field">
+              <label for="contractDate">작성일 <span class="req">*</span></label>
+              <input type="date" id="contractDate" name="contractDate" />
+              <p class="field-error" id="err-contractDate"></p>
+            </div>
+          </div>
+        </fieldset>
+
+        <fieldset class="card">
+          <legend class="card-title">상환조건</legend>
+          <div class="field">
+            <label for="repaymentMethod">상환방법</label>
+            <select id="repaymentMethod" name="repaymentMethod"></select>
+            <p class="field-error" id="err-repaymentMethod"></p>
+          </div>
+          <div class="field-row">
+            <div class="field">
+              <label for="maturityDate">변제기일 (만기) (선택)</label>
+              <input type="date" id="maturityDate" name="maturityDate" />
+              <p class="field-error" id="err-maturityDate"></p>
+            </div>
+            <div class="field">
+              <label for="repaymentPeriodMonths">상환기간 (개월) (선택)</label>
+              <input type="number" id="repaymentPeriodMonths" name="repaymentPeriodMonths" inputmode="numeric" min="1" step="1" />
+              <p class="field-error" id="err-repaymentPeriodMonths"></p>
+            </div>
+          </div>
+          <p class="field-hint">변제기일과 상환기간은 차용일 기준으로 한쪽을 입력하면 다른 쪽이 자동 계산됩니다.</p>
+        </fieldset>
+
+        <fieldset class="card">
+          <legend class="card-title">지급방법</legend>
+          <div class="field">
+            <label for="paymentMethod">지급방법</label>
+            <select id="paymentMethod" name="paymentMethod"></select>
+            <p class="field-error" id="err-paymentMethod"></p>
+          </div>
+        </fieldset>
+
+        <fieldset class="card">
+          <legend class="card-title">특약사항</legend>
+          <div class="field">
+            <label for="note">특약 / 메모 (선택)</label>
+            <textarea id="note" name="note" rows="3"></textarea>
+          </div>
+        </fieldset>
+
+        <div class="form-warnings" id="agreement-warnings" hidden></div>
+
+        <div class="form-actions">
+          <button type="submit" id="btn-save-agreement" class="btn btn-primary btn-block">저장</button>
+        </div>
+      </form>
+    </section>
+
+    <!-- ===================================================================
+         화면 ② 상환 원장
+    ==================================================================== -->
+    <section class="screen" id="screen-ledger" role="tabpanel" aria-labelledby="tab-ledger" hidden>
+      <div class="card">
+        <h2 class="card-title" id="payment-form-title">상환 추가</h2>
+        <form id="form-payment" class="form" novalidate>
+          <div class="field-row">
+            <div class="field">
+              <label for="payment-date">상환일 <span class="req">*</span></label>
+              <input type="date" id="payment-date" name="date" />
+              <p class="field-error" id="err-payment.date"></p>
+            </div>
+            <div class="field">
+              <label for="payment-amount">상환액 (원) <span class="req">*</span></label>
+              <input type="number" id="payment-amount" name="amount" inputmode="numeric" min="1" step="1" />
+              <p class="field-error" id="err-payment.amount"></p>
+            </div>
+          </div>
+          <div class="field">
+            <label for="payment-note">메모 (선택)</label>
+            <input type="text" id="payment-note" name="note" autocomplete="off" />
+          </div>
+          <div class="form-actions">
+            <button type="submit" id="btn-add-payment" class="btn btn-primary">상환 추가</button>
+            <button type="button" id="btn-cancel-edit-payment" class="btn" hidden>수정 취소</button>
+          </div>
+        </form>
+      </div>
+
+      <div class="card">
+        <h2 class="card-title">합계</h2>
+        <dl class="summary-grid" id="ledger-summary"></dl>
+      </div>
+
+      <div class="card">
+        <h2 class="card-title">상환 내역 (날짜순)</h2>
+        <div class="table-wrap">
+          <table class="data-table" id="payment-table">
+            <thead>
+              <tr><th>상환일</th><th class="num">상환액</th><th>메모</th><th>관리</th></tr>
+            </thead>
+            <tbody id="payment-tbody"></tbody>
+          </table>
+        </div>
+        <p class="empty-state" id="payment-empty" hidden>등록된 상환 내역이 없습니다.</p>
+      </div>
+    </section>
+
+    <!-- ===================================================================
+         화면 ③ 상환 대시보드
+    ==================================================================== -->
+    <section class="screen" id="screen-dashboard" role="tabpanel" aria-labelledby="tab-dashboard" hidden>
+      <div class="card">
+        <h2 class="card-title">현재 잔액</h2>
+        <dl class="summary-grid" id="dashboard-balance"></dl>
+        <div class="progress">
+          <div class="progress-bar" id="progress-bar"></div>
+        </div>
+        <p class="progress-label" id="progress-label"></p>
+      </div>
+
+      <div class="card">
+        <h2 class="card-title">상환 계획</h2>
+        <div class="mode-toggle" role="group" aria-label="계산 모드">
+          <button type="button" class="mode-btn is-active" id="mode-maturity" data-mode="maturity">목표 만기 기준 권장 월액</button>
+          <button type="button" class="mode-btn" id="mode-monthly" data-mode="monthly">계획 월액 기준 완납일</button>
+        </div>
+
+        <div class="field">
+          <label for="dashboard-start-month">시작월 (YYYY-MM)</label>
+          <input type="month" id="dashboard-start-month" />
+        </div>
+
+        <!-- 모드 (가): 목표 만기 기준 -->
+        <div class="mode-panel" id="panel-maturity">
+          <dl class="summary-grid" id="maturity-result"></dl>
+        </div>
+
+        <!-- 모드 (나): 계획 월액 기준 -->
+        <div class="mode-panel" id="panel-monthly" hidden>
+          <div class="field">
+            <label for="dashboard-monthly">계획 월액 (원)</label>
+            <input type="number" id="dashboard-monthly" inputmode="numeric" min="1" step="1" />
+          </div>
+          <dl class="summary-grid" id="monthly-result"></dl>
+        </div>
+      </div>
+
+      <div class="card" id="schedule-card" hidden>
+        <h2 class="card-title">표준 상환 스케줄</h2>
+        <div class="table-wrap">
+          <table class="data-table" id="schedule-table">
+            <thead>
+              <tr><th>회차</th><th class="num">납입</th><th class="num">이자</th><th class="num">원금</th><th class="num">잔액</th></tr>
+            </thead>
+            <tbody id="schedule-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================================================================
+         화면 ④ 차용증 출력
+    ==================================================================== -->
+    <section class="screen" id="screen-print" role="tabpanel" aria-labelledby="tab-print" hidden>
+      <div class="card no-print">
+        <h2 class="card-title">차용증 미리보기 / 출력</h2>
+        <div class="form-actions">
+          <button type="button" id="btn-preview" class="btn btn-primary">차용증 미리보기</button>
+          <button type="button" id="btn-print" class="btn">인쇄 / PDF 저장</button>
+        </div>
+        <p class="field-hint">미리보기 후 인쇄를 누르면 화면 UI는 숨겨지고 차용증만 출력됩니다.</p>
+      </div>
+      <div class="print-preview-wrap" id="print-preview-wrap"></div>
+    </section>
+
+  </main>
+
+  <!-- 인쇄 전용 컨테이너 (agreement-view 결과 주입) -->
+  <div id="print-doc"></div>
+
+  <!-- 하단 면책 문구 -->
+  <footer class="app-footer no-print" id="app-footer">
+    <p class="disclaimer" id="disclaimer"></p>
+  </footer>
+
+  <script type="module" src="src/app.js"></script>
+  <!-- 서비스워커 등록 (오프라인/설치형). 상대경로라 루트·하위경로 배포 모두 동작 -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', function () {
+        navigator.serviceWorker.register('sw.js').catch(function () { /* 오프라인 미지원 환경 무시 */ });
+      });
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,12 @@
+{
+  "name": "loan-agreement-app",
+  "version": "1.1.0",
+  "private": true,
+  "type": "module",
+  "description": "차용증(금전소비대차) 관리 앱 — 로컬 우선 정적 웹앱. 차용증 작성·출력 + 실시간 상환 갱신.",
+  "scripts": {
+    "test": "node tests/calc.test.mjs",
+    "serve": "python -m http.server 8000",
+    "icons": "node tools/gen-icons.mjs"
+  }
+}
