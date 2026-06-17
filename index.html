@@ -229,16 +229,20 @@
       </div>
 
       <div class="card">
-        <h2 class="card-title">상환 내역 (날짜순)</h2>
+        <div class="card-head">
+          <h2 class="card-title">상환 내역 (날짜순)</h2>
+          <button type="button" id="btn-export-csv" class="btn btn-small">CSV 내보내기</button>
+        </div>
         <div class="table-wrap">
           <table class="data-table" id="payment-table">
             <thead>
-              <tr><th>상환일</th><th class="num">상환액</th><th>메모</th><th>관리</th></tr>
+              <tr><th>상환일</th><th class="num">상환액</th><th class="num">이자</th><th class="num">원금충당</th><th class="num">잔액</th><th>메모</th><th>관리</th></tr>
             </thead>
             <tbody id="payment-tbody"></tbody>
           </table>
         </div>
         <p class="empty-state" id="payment-empty" hidden>등록된 상환 내역이 없습니다.</p>
+        <p class="field-hint">‘이자/원금충당/잔액’은 차용일·연이율·이자방식을 반영해 각 상환이 어떻게 배분됐는지 보여줍니다(자유상환 기준 계산).</p>
       </div>
     </section>
 

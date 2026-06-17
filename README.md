@@ -100,6 +100,7 @@ npm test                 # = node tests/calc.test.mjs
 - 모든 데이터는 브라우저 **`localStorage`** 에 저장됩니다(키: `loan-app:v1:agreements`). 서버로 전송되지 않습니다.
 - **내보내기**: 전체 데이터를 `loan-backup-YYYYMMDD.json` 파일로 다운로드.
 - **가져오기**: JSON 파일 선택 → 스키마 검증 후 복원(불일치 시 거부).
+- **CSV 내보내기**: 상환 원장의 회차별 이자/원금충당/잔액 내역을 `loan-payments-*.csv`(엑셀 호환, UTF-8 BOM)로 다운로드.
 
 ## 제약 (반드시 준수)
 

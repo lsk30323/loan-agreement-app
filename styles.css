@@ -145,6 +145,14 @@ body {
   margin: 0 0 12px;
   padding: 0;
 }
+.card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.card-head .card-title { margin: 0; }
 fieldset.card { min-width: 0; }
 
 .field { margin-bottom: 14px; }

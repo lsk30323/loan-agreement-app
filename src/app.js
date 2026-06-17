@@ -390,6 +390,17 @@ function sortedPayments(ag) {
     (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
 }
 
+// 유효 상환(금액>0·날짜有)을 날짜순 정렬하고, calc 엔진의 회차별 분해(rows)를
+// 같은 순서로 1:1 매핑해 반환한다. 원장 표·CSV가 동일한 계산 결과를 공유한다.
+function ledgerRows(ag) {
+  const bal = remainingPrincipal(ag);
+  const valid = (ag.payments || [])
+    .filter((p) => p && p.amount > 0 && p.date)
+    .slice()
+    .sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
+  return { bal, items: valid.map((p, i) => ({ p, r: bal.rows[i] || null })) };
+}
+
 function renderLedger() {
   const ag = currentAgreement();
   const tbody = $('payment-tbody');
@@ -399,15 +410,29 @@ function renderLedger() {
   const list = sortedPayments(ag);
   $('payment-empty').hidden = list.length > 0;
 
+  // 회차별 분해(이자/원금충당/잔액)를 상환 id로 조회할 수 있게 매핑.
+  const { bal, items } = ledgerRows(ag);
+  const rowFor = new Map(items.map(({ p, r }) => [p.id, r]));
+
   for (const p of list) {
     const tr = document.createElement('tr');
     if (p.id === state.editingPaymentId) tr.classList.add('is-editing');
+    const r = rowFor.get(p.id) || null;
 
     const tdDate = document.createElement('td');
     tdDate.textContent = p.date || '';
     const tdAmount = document.createElement('td');
     tdAmount.className = 'num';
     tdAmount.textContent = fmtWon(p.amount);
+    const tdInterest = document.createElement('td');
+    tdInterest.className = 'num';
+    tdInterest.textContent = r ? fmtWon(r.interest) : '—';
+    const tdPrincipal = document.createElement('td');
+    tdPrincipal.className = 'num';
+    tdPrincipal.textContent = r ? fmtWon(r.principalPaid) : '—';
+    const tdBalance = document.createElement('td');
+    tdBalance.className = 'num';
+    tdBalance.textContent = r ? fmtWon(r.balance) : '—';
     const tdNote = document.createElement('td');
     tdNote.className = 'note-cell';
     tdNote.textContent = p.note || '';
@@ -425,13 +450,12 @@ function renderLedger() {
     del.addEventListener('click', () => deletePayment(p.id));
     tdAct.append(edit, del);
 
-    tr.append(tdDate, tdAmount, tdNote, tdAct);
+    tr.append(tdDate, tdAmount, tdInterest, tdPrincipal, tdBalance, tdNote, tdAct);
     tbody.appendChild(tr);
   }
 
   // 합계
   const total = list.reduce((s, p) => s + (p.amount || 0), 0);
-  const bal = remainingPrincipal(ag);
   renderSummary($('ledger-summary'), [
     ['총 상환액', fmtWon(total) + '원'],
     ['납부 이자 합계', fmtWon(bal.accruedInterest) + '원'],
@@ -526,6 +550,58 @@ function handleAddPayment(e) {
   }
   persist();
   refreshLiveScreens();
+}
+
+// ----- 상환 내역 CSV 내보내기 -----
+// CSV 한 칸 이스케이프(콤마·따옴표·줄바꿈 포함 시 따옴표로 감싸고 "는 "" 처리).
+function csvField(v) {
+  const s = v == null ? '' : String(v);
+  return /[",\n\r]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+}
+
+function buildLedgerCSV(ag) {
+  const { items } = ledgerRows(ag);
+  const header = ['상환일', '상환액', '이자', '원금충당', '잔액', '메모'];
+  const lines = [header.map(csvField).join(',')];
+  for (const { p, r } of items) {
+    lines.push([
+      p.date,
+      p.amount,
+      r ? r.interest : '',
+      r ? r.principalPaid : '',
+      r ? r.balance : '',
+      p.note || '',
+    ].map(csvField).join(','));
+  }
+  return lines.join('\r\n');
+}
+
+function csvStamp() {
+  const d = new Date();
+  return `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`;
+}
+
+function handleExportLedgerCSV() {
+  const ag = currentAgreement();
+  if (!ag) return;
+  const hasRows = (ag.payments || []).some((p) => p && p.amount > 0 && p.date);
+  if (!hasRows) {
+    showGlobalMessage('내보낼 상환 내역이 없습니다.', 'error');
+    return;
+  }
+  // 엑셀에서 한글이 깨지지 않도록 UTF-8 BOM을 앞에 붙인다.
+  const blob = new Blob(['\uFEFF' + buildLedgerCSV(ag)], { type: 'text/csv;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const who = ((ag.debtor && ag.debtor.name) ? ag.debtor.name : 'unknown')
+    .replace(/[\\/:*?"<>|\s]+/g, '_');
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `loan-payments-${who}-${csvStamp()}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 0);
+  showGlobalMessage('상환 내역 CSV를 내보냈습니다.', 'ok');
 }
 
 // =====================================================================
@@ -851,6 +927,7 @@ function bindEvents() {
   // 화면 ② 상환
   $('form-payment').addEventListener('submit', handleAddPayment);
   $('btn-cancel-edit-payment').addEventListener('click', () => exitPaymentEditMode(true));
+  $('btn-export-csv').addEventListener('click', handleExportLedgerCSV);
 
   // 화면 ③ 대시보드
   $('mode-maturity').addEventListener('click', () => { state.dashboardMode = 'maturity'; renderDashboard(); });
