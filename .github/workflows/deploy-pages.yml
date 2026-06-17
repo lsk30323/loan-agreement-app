@@ -1,0 +1,48 @@
+# 차용증 앱 — GitHub Pages 자동 배포(앱 파일만 추려 게시).
+# main 브랜치에 push되면 index.html·styles.css·manifest·sw.js·icons·src 만
+# _site로 묶어 HTTPS로 게시한다(spec·tests·tools·.claude 등은 제외).
+#
+# 활성화: Settings → Pages → Source 를 "GitHub Actions" 로 두면
+#         첫 실행에서 Pages가 자동 활성화(enablement:true)되고 배포된다.
+
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Stage site
+        run: |
+          mkdir -p _site
+          cp -r index.html styles.css manifest.webmanifest sw.js icons src _site/
+          touch _site/.nojekyll
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+        with:
+          enablement: true
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+      - name: Deploy
+        id: deployment
+        uses: actions/deploy-pages@v4
