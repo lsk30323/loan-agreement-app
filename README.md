@@ -76,9 +76,11 @@ npm test                 # = node tests/calc.test.mjs
 │  ├─ calc.js              # calc-engine: 잔액/스케줄/갱신/한글금액  ✅ 완성·검증
 │  ├─ app.js               # frontend-ui: 화면·상태·이벤트
 │  ├─ storage.js           # localStorage 저장/복원, JSON 내보내기/가져오기
+│  ├─ ledger.js            # 원장 표시·CSV·포트폴리오 합계(순수 함수)  ✅ 테스트
 │  └─ agreement-view.js    # doc-generator: 차용증 문서 렌더링
 ├─ tests/
-│  └─ calc.test.mjs        # §9 계산 테스트(Node 실행)  ✅
+│  ├─ calc.test.mjs        # §9 계산 테스트(Node 실행)  ✅
+│  └─ ledger.test.mjs      # 원장/CSV/합계 테스트(Node 실행)  ✅
 ├─ tools/
 │  └─ gen-icons.mjs        # PNG 아이콘 생성기(외부 의존성 0). `npm run icons`
 ├─ .claude/
@@ -100,7 +102,8 @@ npm test                 # = node tests/calc.test.mjs
 - 모든 데이터는 브라우저 **`localStorage`** 에 저장됩니다(키: `loan-app:v1:agreements`). 서버로 전송되지 않습니다.
 - **내보내기**: 전체 데이터를 `loan-backup-YYYYMMDD.json` 파일로 다운로드.
 - **가져오기**: JSON 파일 선택 → 스키마 검증 후 복원(불일치 시 거부).
-- **CSV 내보내기**: 상환 원장의 회차별 이자/원금충당/잔액 내역을 `loan-payments-*.csv`(엑셀 호환, UTF-8 BOM)로 다운로드.
+- **CSV 내보내기**: 상환 원장(회차별 이자/원금충당/잔액)과 표준 상환 스케줄을 각각 `loan-payments-*.csv` / `loan-schedule-*.csv`(엑셀 호환, UTF-8 BOM)로 다운로드.
+- **전체 요약**: 대시보드 상단에서 모든 차용증의 합계(건수·총 원금·총 상환액·총 이자·총 잔여원금)를 확인.
 
 ## 제약 (반드시 준수)
 

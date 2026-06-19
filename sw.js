@@ -7,7 +7,7 @@
 //
 // ⚠ 파일을 수정해 재배포할 때는 아래 CACHE 버전을 올려야 새 파일이 반영된다.
 // =====================================================================
-const CACHE = "loan-app-v2";
+const CACHE = "loan-app-v3";
 
 const ASSETS = [
   "./",
@@ -18,6 +18,7 @@ const ASSETS = [
   "./src/calc.js",
   "./src/model.js",
   "./src/storage.js",
+  "./src/ledger.js",
   "./src/agreement-view.js",
   "./icons/icon.svg",
   "./icons/icon-192.png",

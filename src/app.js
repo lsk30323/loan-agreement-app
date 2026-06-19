@@ -45,6 +45,13 @@ import {
 
 import { renderAgreementHTML } from './agreement-view.js';
 
+import {
+  ledgerRows,
+  buildLedgerCSV,
+  buildScheduleCSV,
+  portfolioSummary,
+} from './ledger.js';
+
 // ---------------------------------------------------------------------
 // 앱 상태
 // ---------------------------------------------------------------------
@@ -390,17 +397,6 @@ function sortedPayments(ag) {
     (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
 }
 
-// 유효 상환(금액>0·날짜有)을 날짜순 정렬하고, calc 엔진의 회차별 분해(rows)를
-// 같은 순서로 1:1 매핑해 반환한다. 원장 표·CSV가 동일한 계산 결과를 공유한다.
-function ledgerRows(ag) {
-  const bal = remainingPrincipal(ag);
-  const valid = (ag.payments || [])
-    .filter((p) => p && p.amount > 0 && p.date)
-    .slice()
-    .sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
-  return { bal, items: valid.map((p, i) => ({ p, r: bal.rows[i] || null })) };
-}
-
 function renderLedger() {
   const ag = currentAgreement();
   const tbody = $('payment-tbody');
@@ -552,33 +548,30 @@ function handleAddPayment(e) {
   refreshLiveScreens();
 }
 
-// ----- 상환 내역 CSV 내보내기 -----
-// CSV 한 칸 이스케이프(콤마·따옴표·줄바꿈 포함 시 따옴표로 감싸고 "는 "" 처리).
-function csvField(v) {
-  const s = v == null ? '' : String(v);
-  return /[",\n\r]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
-}
-
-function buildLedgerCSV(ag) {
-  const { items } = ledgerRows(ag);
-  const header = ['상환일', '상환액', '이자', '원금충당', '잔액', '메모'];
-  const lines = [header.map(csvField).join(',')];
-  for (const { p, r } of items) {
-    lines.push([
-      p.date,
-      p.amount,
-      r ? r.interest : '',
-      r ? r.principalPaid : '',
-      r ? r.balance : '',
-      p.note || '',
-    ].map(csvField).join(','));
-  }
-  return lines.join('\r\n');
-}
-
+// ----- CSV 내보내기 (DOM 다운로드) -----
+// CSV 생성(csvField/buildLedgerCSV/buildScheduleCSV)은 순수 모듈 ledger.js가 담당.
+// 여기서는 파일 다운로드(브라우저 전용)만 처리한다.
 function csvStamp() {
   const d = new Date();
   return `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`;
+}
+
+// 파일명에 못 쓰는 문자/공백을 _로 치환.
+function safeName(s) {
+  return String(s || 'unknown').replace(/[\\/:*?"<>|\s]+/g, '_');
+}
+
+// CSV 문자열을 UTF-8 BOM과 함께 파일로 내려받는다(엑셀 한글 호환).
+function downloadCSV(csv, filename) {
+  const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 0);
 }
 
 function handleExportLedgerCSV() {
@@ -589,19 +582,20 @@ function handleExportLedgerCSV() {
     showGlobalMessage('내보낼 상환 내역이 없습니다.', 'error');
     return;
   }
-  // 엑셀에서 한글이 깨지지 않도록 UTF-8 BOM을 앞에 붙인다.
-  const blob = new Blob(['\uFEFF' + buildLedgerCSV(ag)], { type: 'text/csv;charset=utf-8' });
-  const url = URL.createObjectURL(blob);
-  const who = ((ag.debtor && ag.debtor.name) ? ag.debtor.name : 'unknown')
-    .replace(/[\\/:*?"<>|\s]+/g, '_');
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `loan-payments-${who}-${csvStamp()}.csv`;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  setTimeout(() => URL.revokeObjectURL(url), 0);
+  downloadCSV(buildLedgerCSV(ag), `loan-payments-${safeName(ag.debtor && ag.debtor.name)}-${csvStamp()}.csv`);
   showGlobalMessage('상환 내역 CSV를 내보냈습니다.', 'ok');
+}
+
+function handleExportScheduleCSV() {
+  const ag = currentAgreement();
+  if (!ag) return;
+  const csv = buildScheduleCSV(ag);
+  if (!csv) {
+    showGlobalMessage('표준 스케줄이 없습니다(자유상환이거나 상환기간 미입력).', 'error');
+    return;
+  }
+  downloadCSV(csv, `loan-schedule-${safeName(ag.debtor && ag.debtor.name)}-${csvStamp()}.csv`);
+  showGlobalMessage('표준 스케줄 CSV를 내보냈습니다.', 'ok');
 }
 
 // =====================================================================
@@ -621,9 +615,25 @@ function getStartMonth(ag) {
   return v && /^\d{4}-\d{2}$/.test(v) ? v : defaultStartMonth(ag);
 }
 
+// 모든 차용증의 합계 요약(전체 대시보드 카드).
+function renderPortfolioSummary() {
+  const el = $('portfolio-summary');
+  if (!el) return;
+  const s = portfolioSummary(state.agreements);
+  renderSummary(el, [
+    ['차용증 수', s.count + '건'],
+    ['총 차용 원금', fmtWon(s.totalPrincipal) + '원'],
+    ['총 상환액', fmtWon(s.totalRepaid) + '원'],
+    ['총 납부 이자', fmtWon(s.totalInterest) + '원'],
+    ['총 잔여 원금', fmtWon(s.totalRemaining) + '원'],
+  ]);
+}
+
 function renderDashboard() {
   const ag = currentAgreement();
   if (!ag) return;
+
+  renderPortfolioSummary();
 
   // 시작월 기본값 채우기(비어 있으면)
   if (!$('dashboard-start-month').value) {
@@ -936,6 +946,7 @@ function bindEvents() {
   $('dashboard-monthly').addEventListener('input', () => {
     if (state.dashboardMode === 'monthly') renderMonthlyMode(currentAgreement(), getStartMonth(currentAgreement()));
   });
+  $('btn-export-schedule-csv').addEventListener('click', handleExportScheduleCSV);
 
   // 화면 ④ 출력
   $('btn-preview').addEventListener('click', () => { renderPreview(); });

@@ -251,6 +251,11 @@
     ==================================================================== -->
     <section class="screen" id="screen-dashboard" role="tabpanel" aria-labelledby="tab-dashboard" hidden>
       <div class="card">
+        <h2 class="card-title">전체 차용증 요약 (모든 건 합계)</h2>
+        <dl class="summary-grid" id="portfolio-summary"></dl>
+      </div>
+
+      <div class="card">
         <h2 class="card-title">현재 잔액</h2>
         <dl class="summary-grid" id="dashboard-balance"></dl>
         <div class="progress">
@@ -287,7 +292,10 @@
       </div>
 
       <div class="card" id="schedule-card" hidden>
-        <h2 class="card-title">표준 상환 스케줄</h2>
+        <div class="card-head">
+          <h2 class="card-title">표준 상환 스케줄</h2>
+          <button type="button" id="btn-export-schedule-csv" class="btn btn-small">CSV 내보내기</button>
+        </div>
         <div class="table-wrap">
           <table class="data-table" id="schedule-table">
             <thead>
