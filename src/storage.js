@@ -10,6 +10,9 @@
 
 import { STORAGE_KEY, SCHEMA_VERSION, normalizeAgreement, validateBackup } from './model.js';
 
+// 마지막 백업(전체 JSON 내보내기/가져오기) 시각(ms)을 저장하는 키.
+const BACKUP_KEY = "loan-app:v1:lastBackupAt";
+
 // ---- 내부 헬퍼 -------------------------------------------------------
 
 // 오늘 날짜를 'YYYYMMDD' 문자열로(브라우저 런타임 기준).
@@ -91,6 +94,41 @@ export function exportToFile(agreements) {
   document.body.removeChild(a);
   // 다음 틱에 객체 URL 해제(클릭 다운로드가 완료된 뒤).
   setTimeout(() => URL.revokeObjectURL(url), 0);
+  // 전체 백업이 완료됐으므로 마지막 백업 시각을 기록(백업 알림 해제용).
+  markBackupDone();
+}
+
+// ---- 백업 알림 추적 -------------------------------------------------
+
+// 마지막 백업 시각(ms)을 읽는다. 없거나 파싱 실패 시 null.
+export function getLastBackupAt() {
+  try {
+    const v = localStorage.getItem(BACKUP_KEY);
+    const n = v == null ? NaN : Number(v);
+    return Number.isFinite(n) ? n : null;
+  } catch {
+    return null;
+  }
+}
+
+// 마지막 백업 시각을 now로 기록한다.
+export function markBackupDone(nowMs = Date.now()) {
+  try {
+    localStorage.setItem(BACKUP_KEY, String(nowMs));
+  } catch {
+    /* 저장 실패 무시 */
+  }
+  return nowMs;
+}
+
+// 백업 알림을 띄울지 결정하는 순수 함수(테스트 대상).
+// - 데이터가 없으면 알리지 않음.
+// - 백업 이력이 없으면(데이터는 있음) 알림.
+// - 마지막 백업 후 thresholdDays 이상 지났으면 알림.
+export function needsBackupReminder(hasData, lastBackupAtMs, nowMs, thresholdDays = 14) {
+  if (!hasData) return false;
+  if (!lastBackupAtMs) return true;
+  return (nowMs - lastBackupAtMs) >= thresholdDays * 86400000;
 }
 
 // 선택한 파일을 읽어 검증 후 정규화된 차용증 배열을 반환.

@@ -35,6 +35,15 @@
     </div>
     <!-- 전역 안내/오류 메시지 (가져오기 결과 등) -->
     <p id="global-message" class="global-message" role="status" aria-live="polite" hidden></p>
+
+    <!-- 백업 자동 알림: 데이터는 기기에만 저장되므로 일정 기간 미백업 시 안내 -->
+    <div id="backup-reminder" class="backup-reminder" role="status" aria-live="polite" hidden>
+      <span class="backup-reminder-text">데이터는 이 기기에만 저장됩니다. 마지막 백업 이후 시간이 지났어요 — 백업(내보내기)을 권장합니다.</span>
+      <span class="backup-reminder-actions">
+        <button type="button" id="btn-backup-now" class="btn btn-small btn-primary">지금 내보내기</button>
+        <button type="button" id="btn-backup-dismiss" class="btn btn-small">닫기</button>
+      </span>
+    </div>
   </header>
 
   <!-- ===== 탭 내비게이션 ===== -->
@@ -236,7 +245,7 @@
         <div class="table-wrap">
           <table class="data-table" id="payment-table">
             <thead>
-              <tr><th>상환일</th><th class="num">상환액</th><th class="num">이자</th><th class="num">원금충당</th><th class="num">잔액</th><th>메모</th><th>관리</th></tr>
+              <tr><th scope="col">상환일</th><th scope="col" class="num">상환액</th><th scope="col" class="num">이자</th><th scope="col" class="num">원금충당</th><th scope="col" class="num">잔액</th><th scope="col">메모</th><th scope="col">관리</th></tr>
             </thead>
             <tbody id="payment-tbody"></tbody>
           </table>
@@ -259,7 +268,7 @@
         <h2 class="card-title">현재 잔액</h2>
         <dl class="summary-grid" id="dashboard-balance"></dl>
         <div class="progress">
-          <div class="progress-bar" id="progress-bar"></div>
+          <div class="progress-bar" id="progress-bar" role="progressbar" aria-label="원금 상환 진행률" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"></div>
         </div>
         <p class="progress-label" id="progress-label"></p>
       </div>
@@ -294,12 +303,15 @@
       <div class="card" id="schedule-card" hidden>
         <div class="card-head">
           <h2 class="card-title">표준 상환 스케줄</h2>
-          <button type="button" id="btn-export-schedule-csv" class="btn btn-small">CSV 내보내기</button>
+          <div class="card-head-actions">
+            <button type="button" id="btn-toggle-schedule" class="btn btn-small" aria-expanded="true" aria-controls="schedule-table-wrap">접기</button>
+            <button type="button" id="btn-export-schedule-csv" class="btn btn-small">CSV 내보내기</button>
+          </div>
         </div>
-        <div class="table-wrap">
+        <div class="table-wrap" id="schedule-table-wrap">
           <table class="data-table" id="schedule-table">
             <thead>
-              <tr><th>회차</th><th class="num">납입</th><th class="num">이자</th><th class="num">원금</th><th class="num">잔액</th></tr>
+              <tr><th scope="col">회차</th><th scope="col" class="num">납입</th><th scope="col" class="num">이자</th><th scope="col" class="num">원금</th><th scope="col" class="num">잔액</th></tr>
             </thead>
             <tbody id="schedule-tbody"></tbody>
           </table>

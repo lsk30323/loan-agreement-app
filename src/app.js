@@ -41,6 +41,9 @@ import {
   saveAgreements,
   exportToFile,
   importFromFile,
+  getLastBackupAt,
+  markBackupDone,
+  needsBackupReminder,
 } from './storage.js';
 
 import { renderAgreementHTML } from './agreement-view.js';
@@ -61,6 +64,8 @@ const state = {
   screen: 'edit',
   dashboardMode: 'maturity', // 'maturity' | 'monthly'
   editingPaymentId: null,    // 상환 원장에서 수정 중인 항목 id (null이면 추가 모드)
+  backupReminderDismissed: false, // 이번 세션에서 백업 알림을 닫았는지
+  scheduleCollapsed: false,  // 표준 스케줄 표 접힘 상태
 };
 
 // ---------------------------------------------------------------------
@@ -369,7 +374,11 @@ function syncMaskButton(inputId) {
   const btn = document.querySelector(`.btn-mask-toggle[data-target="${inputId}"]`);
   if (!btn) return;
   const el = $(inputId);
-  btn.textContent = el.dataset.masked === 'true' ? '보기' : '가리기';
+  const masked = el.dataset.masked === 'true';
+  btn.textContent = masked ? '보기' : '가리기';
+  // aria-pressed: 원문이 드러난(가리지 않은) 상태를 'true'로 표시.
+  btn.setAttribute('aria-pressed', masked ? 'false' : 'true');
+  btn.setAttribute('aria-label', masked ? '주민등록번호 보기' : '주민등록번호 가리기');
 }
 function toggleMask(inputId) {
   const el = $(inputId);
@@ -654,6 +663,7 @@ function renderDashboard() {
   const repaidPrincipal = Math.max(0, principal - bal.principal);
   const pct = principal > 0 ? Math.min(100, Math.round((repaidPrincipal / principal) * 1000) / 10) : 0;
   $('progress-bar').style.width = pct + '%';
+  $('progress-bar').setAttribute('aria-valuenow', String(pct));
   setText($('progress-label'),
     `원금 상환 진행률 ${pct}% (${fmtWon(repaidPrincipal)} / ${fmtWon(principal)}원)`);
 
@@ -752,6 +762,22 @@ function renderSchedule(ag) {
     });
     tbody.appendChild(tr);
   }
+  applyScheduleCollapsed();
+}
+
+// 스케줄 표 접힘 상태를 DOM에 반영(버튼 라벨·aria-expanded 동기화).
+function applyScheduleCollapsed() {
+  const wrap = $('schedule-table-wrap');
+  const btn = $('btn-toggle-schedule');
+  if (!wrap || !btn) return;
+  wrap.hidden = state.scheduleCollapsed;
+  btn.setAttribute('aria-expanded', state.scheduleCollapsed ? 'false' : 'true');
+  btn.textContent = state.scheduleCollapsed ? '펼치기' : '접기';
+}
+
+function toggleSchedule() {
+  state.scheduleCollapsed = !state.scheduleCollapsed;
+  applyScheduleCollapsed();
 }
 
 // =====================================================================
@@ -781,6 +807,7 @@ function refreshLiveScreens() {
   renderAgreementSelect();
   renderLedger();
   renderDashboard();
+  renderBackupReminder();
 }
 
 // =====================================================================
@@ -869,10 +896,12 @@ function handleSaveAgreement(e) {
 }
 
 // =====================================================================
-// 내보내기 / 가져오기
+// 내보내기 / 가져오기 / 백업 알림
 // =====================================================================
 function handleExport() {
-  exportToFile(state.agreements);
+  exportToFile(state.agreements); // 내부에서 markBackupDone() 호출
+  state.backupReminderDismissed = false;
+  renderBackupReminder();
   showGlobalMessage('백업 JSON 파일을 내보냈습니다.', 'ok');
 }
 
@@ -888,9 +917,27 @@ async function handleImportFile(file) {
   }
   state.currentId = state.agreements[0].id;
   persist();
+  markBackupDone(); // 가져온 JSON 자체가 백업본이므로 백업 시각 갱신
+  state.backupReminderDismissed = false;
   selectAgreement(state.currentId);
   switchScreen('edit');
   showGlobalMessage(`가져오기 성공: 차용증 ${res.agreements.length}건을 불러왔습니다.`, 'ok');
+}
+
+// 실제 데이터(상환 내역이 있거나 원금이 입력된 차용증)가 있는지.
+function hasRealData() {
+  return state.agreements.some(
+    (a) => (a.payments && a.payments.length > 0) || (a.principal && a.principal > 0),
+  );
+}
+
+// 백업 알림 배너 표시/숨김 갱신.
+function renderBackupReminder() {
+  const box = $('backup-reminder');
+  if (!box) return;
+  const show = !state.backupReminderDismissed
+    && needsBackupReminder(hasRealData(), getLastBackupAt(), Date.now());
+  box.hidden = !show;
 }
 
 // =====================================================================
@@ -911,6 +958,13 @@ function bindEvents() {
     const file = e.target.files && e.target.files[0];
     if (file) handleImportFile(file);
     e.target.value = ''; // 같은 파일 재선택 허용
+  });
+
+  // 백업 알림 배너
+  $('btn-backup-now').addEventListener('click', handleExport);
+  $('btn-backup-dismiss').addEventListener('click', () => {
+    state.backupReminderDismissed = true;
+    renderBackupReminder();
   });
 
   // 차용증 선택
@@ -947,6 +1001,7 @@ function bindEvents() {
     if (state.dashboardMode === 'monthly') renderMonthlyMode(currentAgreement(), getStartMonth(currentAgreement()));
   });
   $('btn-export-schedule-csv').addEventListener('click', handleExportScheduleCSV);
+  $('btn-toggle-schedule').addEventListener('click', toggleSchedule);
 
   // 화면 ④ 출력
   $('btn-preview').addEventListener('click', () => { renderPreview(); });
@@ -970,6 +1025,8 @@ function init() {
   if (!state.agreements || state.agreements.length === 0) {
     state.agreements = [buildSeed()];
     saveAgreements(state.agreements);
+    // 데모 시드만 있는 첫 실행은 백업 알림 시계를 지금부터 시작(즉시 알림 방지).
+    if (getLastBackupAt() === null) markBackupDone();
   }
   state.currentId = state.agreements[0].id;
 

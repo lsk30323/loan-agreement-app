@@ -92,6 +92,27 @@ body {
 .global-message.is-ok { background: #e6f6ee; color: var(--c-ok); border: 1px solid #b6e3cb; }
 .global-message.is-error { background: #fdecea; color: var(--c-danger); border: 1px solid #f1bcb5; }
 
+/* 백업 자동 알림 배너 */
+.backup-reminder {
+  max-width: var(--maxw);
+  margin: 10px auto 0;
+  padding: 10px 12px;
+  border-radius: var(--radius);
+  background: #fff7e6;
+  color: #8a5a00;
+  border: 1px solid #ffd99a;
+  font-size: 0.9rem;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.backup-reminder-actions { display: flex; gap: 6px; flex-shrink: 0; }
+
+/* 카드 헤더 우측 버튼 묶음(스케줄 접기/CSV 등) */
+.card-head-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+
 /* ===== 탭 내비게이션 ===== */
 .tab-nav {
   position: sticky;
